@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Color Tap - Viral Game</title>
+    <style>
+        body {
+            text-align: center;
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            color: white;
+        }
+
+        #gameContainer {
+            max-width: 500px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        }
+
+        #scoreContainer {
+            font-size: 1.5em;
+            margin: 20px 0;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 10px;
+            border-radius: 10px;
+            display: inline-block;
+        }
+
+        #colorCircle {
+            width: 250px;
+            height: 250px;
+            background-color: grey;
+            border-radius: 50%;
+            margin: 30px auto;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 5px solid white;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2em;
+            font-weight: bold;
+            color: rgba(0, 0, 0, 0.7);
+        }
+
+        #colorCircle:hover {
+            transform: scale(1.05);
+        }
+
+        #colorCircle:active {
+            transform: scale(0.95);
+        }
+
+        #instructions {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+            font-size: 1.1em;
+        }
+
+        #gameInfo {
+            margin-top: 20px;
+            font-size: 1.2em;
+        }
+
+        .highlight {
+            color: #FFD700;
+            font-weight: bold;
+        }
+
+        .pulse {
+            animation: pulse 0.5s ease-in-out;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
+        .flash-green {
+            animation: flashGreen 0.3s ease;
+        }
+
+        .flash-red {
+            animation: flashRed 0.3s ease;
+        }
+
+        @keyframes flashGreen {
+            0% { background-color: lightgreen; }
+            100% { background-color: inherit; }
+        }
+
+        @keyframes flashRed {
+            0% { background-color: pink; }
+            100% { background-color: inherit; }
+        }
+
+        button {
+            background: #FFD700;
+            color: #333;
+            border: none;
+            padding: 12px 25px;
+            font-size: 1.1em;
+            border-radius: 25px;
+            cursor: pointer;
+            margin: 10px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+
+        button:hover {
+            background: #FFE55C;
+            transform: translateY(-2px);
+        }
+
+        .difficulty-btn {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+        }
+
+        .difficulty-btn.active {
+            background: #4CAF50;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <h1>🎮 COLOR TAP 🎮</h1>
+        
+        <div id="scoreContainer">
+            Score: <span id="scoreDisplay" class="highlight">0</span> | 
+            High Score: <span id="highScoreDisplay" class="highlight">0</span>
+        </div>
+
+        <div id="colorCircle">
+            <span id="colorWord">READY?</span>
+        </div>
+
+        <div id="instructions">
+            <p>🎯 <strong>HOW TO PLAY:</strong></p>
+            <p>Tap the circle when the circle's <span class="highlight">COLOR</span><br>
+            matches the word's <span class="highlight">MEANING</span>!</p>
+            <p>Example: Circle is <span style="color:red">RED</span> and word says "RED" → <span class="highlight">TAP!</span></p>
+        </div>
+
+        <div id="gameInfo">
+            <p>Time: <span id="timeLeft">60</span>s | Speed: <span id="speedDisplay">Normal</span></p>
+        </div>
+
+        <div>
+            <button onclick="changeDifficulty('easy')" class="difficulty-btn">Easy</button>
+            <button onclick="changeDifficulty('normal')" class="difficulty-btn active">Normal</button>
+            <button onclick="changeDifficulty('hard')" class="difficulty-btn">Hard</button>
+            <button onclick="startGame()" id="startBtn">START GAME</button>
+        </div>
+
+        <div style="margin-top: 20px; font-size: 0.9em; opacity: 0.8;">
+            Made with ❤️ by Sudip - Future Game Developer!
+        </div>
+    </div>
+
+    <script>
+        // Game variables
+        let colors = ["red", "blue", "green", "yellow", "purple", "orange"];
+        let colorNames = ["RED", "BLUE", "GREEN", "YELLOW", "PURPLE", "ORANGE"];
+        let playerScore = 0;
+        let highScore = 0;
+        let currentCircleColor = '';
+        let currentWordMeaning = '';
+        let gameInterval;
+        let timeLeft = 60;
+        let gameActive = false;
+        let difficulty = 'normal';
+
+        // Get HTML elements
+        const circle = document.getElementById("colorCircle");
+        const wordElement = document.getElementById("colorWord");
+        const scoreDisplay = document.getElementById("scoreDisplay");
+        const highScoreDisplay = document.getElementById("highScoreDisplay");
+        const timeLeftDisplay = document.getElementById("timeLeft");
+        const speedDisplay = document.getElementById("speedDisplay");
+        const startBtn = document.getElementById("startBtn");
+
+        // Function to change colors
+        function changeColor() {
+            if (!gameActive) return;
+
+            // Pick random color for circle
+            let randomColorIndex = Math.floor(Math.random() * colors.length);
+            circle.style.backgroundColor = colors[randomColorIndex];
+            currentCircleColor = colors[randomColorIndex];
+            
+            // Pick random word and random color for word
+            let randomWordIndex = Math.floor(Math.random() * colorNames.length);
+            let randomTextColorIndex = Math.floor(Math.random() * colors.length);
+            
+            // Set the word and its color
+            wordElement.textContent = colorNames[randomWordIndex];
+            wordElement.style.color = colors[randomTextColorIndex];
+            currentWordMeaning = colorNames[randomWordIndex];
+        }
+
+        // Function when circle is tapped
+        function circleWasTapped() {
+            if (!gameActive) return;
+
+            if (currentCircleColor === currentWordMeaning.toLowerCase()) {
+                // Correct tap
+                playerScore += getPointsForDifficulty();
+                circle.classList.add('flash-green');
+                circle.classList.add('pulse');
+                setTimeout(() => {
+                    circle.classList.remove('flash-green');
+                    circle.classList.remove('pulse');
+                }, 300);
+            } else {
+                // Wrong tap
+                playerScore = Math.max(0, playerScore - 2);
+                circle.classList.add('flash-red');
+                setTimeout(() => {
+                    circle.classList.remove('flash-red');
+                }, 300);
+            }
+            
+            // Update score display
+            scoreDisplay.textContent = playerScore;
+            if (playerScore > highScore) {
+                highScore = playerScore;
+                highScoreDisplay.textContent = highScore;
+            }
+        }
+
+        // Difficulty settings
+        function getPointsForDifficulty() {
+            switch(difficulty) {
+                case 'easy': return 1;
+                case 'normal': return 2;
+                case 'hard': return 3;
+                default: return 2;
+            }
+        }
+
+        function getSpeedForDifficulty() {
+            switch(difficulty) {
+                case 'easy': return 1500;
+                case 'normal': return 1000;
+                case 'hard': return 600;
+                default: return 1000;
+            }
+        }
+
+        function changeDifficulty(level) {
+            difficulty = level;
+            
+            // Update button styles
+            document.querySelectorAll('.difficulty-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            // Update speed display
+            switch(level) {
+                case 'easy': speedDisplay.textContent = 'Slow'; break;
+                case 'normal': speedDisplay.textContent = 'Normal'; break;
+                case 'hard': speedDisplay.textContent = 'Fast'; break;
+            }
+        }
+
+        // Game timer
+        function updateTimer() {
+            if (!gameActive) return;
+
+            timeLeft--;
+            timeLeftDisplay.textContent = timeLeft;
+
+            if (timeLeft <= 0) {
+                endGame();
+            }
+        }
+
+        // Start game
+        function startGame() {
+            playerScore = 0;
+            timeLeft = 60;
+            gameActive = true;
+            
+            scoreDisplay.textContent = '0';
+            timeLeftDisplay.textContent = '60';
+            startBtn.textContent = 'RESTART GAME';
+            
+            // Clear any existing interval
+            if (gameInterval) {
+                clearInterval(gameInterval);
+            }
+            
+            // Start game loop
+            gameInterval = setInterval(changeColor, getSpeedForDifficulty());
+            
+            // Start timer
+            setInterval(updateTimer, 1000);
+            
+            // Initial color change
+            changeColor();
+        }
+
+        // End game
+        function endGame() {
+            gameActive = false;
+            clearInterval(gameInterval);
+            
+            alert(`Game Over!\nYour Score: ${playerScore}\nHigh Score: ${highScore}\n\nGreat job! 🎉`);
+        }
+
+        // Initialize game
+        circle.addEventListener('click', circleWasTapped);
+        
+        // Set initial circle color
+        circle.style.backgroundColor = 'grey';
+        wordElement.textContent = 'READY?';
+        wordElement.style.color = 'black';
+
+        // Make it responsive
+        window.addEventListener('resize', function() {
+            const container = document.getElementById('gameContainer');
+            if (window.innerWidth < 600) {
+                container.style.maxWidth = '90%';
+                document.getElementById('colorCircle').style.width = '200px';
+                document.getElementById('colorCircle').style.height = '200px';
+            } else {
+                container.style.maxWidth = '500px';
+                document.getElementById('colorCircle').style.width = '250px';
+                document.getElementById('colorCircle').style.height = '250px';
+            }
+        });
+    </script>
+</body>
+</html>
